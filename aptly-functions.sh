@@ -25,24 +25,22 @@ aptly_repo_exists() {
     aptly repo show "$1" 2>/dev/null 1>&2
 }
 
-# Returns the base part from the given repository name.
-# The name of the repo should be composed of the
-# basename, architecture and component parts joined
-# with the hyphen.
+# Returns the base part from the given repository (or snapshot) name.
+# The name of the repo should be composed of the basename,
+# architecture and component parts joined with hyphen.
 #
-# args: base-arch-component
+# args: base-arch-component[-suffix]
 # outputs: base
 #
 get_repo_base_name() {
     echo "${1%%-*}"
 }
 
-# Returns the architecture part from the given repository name.
-# The name of the repo should be composed of the
-# basename, architecture and component parts joined
-# with the hyphen.
+# Returns the architecture part from the given repository (or
+# snapshot) name. The name of the repo should be composed of the
+# basename, architecture and component parts joined with hyphen.
 #
-# args: base-arch-component
+# args: base-arch-component[-suffix]
 # outputs: arch
 #
 get_repo_arch_name() {
@@ -51,9 +49,8 @@ get_repo_arch_name() {
 }
 
 # Returns the component part from the given repository name.
-# The name of the repo should be composed of the
-# basename, architecture and component parts joined
-# with the hyphen.
+# The name of the repo should be composed of the basename,
+# architecture and component parts joined with hyphen.
 #
 # args: base-arch-component
 # outputs: component
@@ -172,4 +169,133 @@ aptly_snapshot_multiarch() {
 
     aptly snapshot merge "$sn" $sns 2>/dev/null 1>&2 && \
         echo "$sn"
+}
+
+# Returns the suffix part of the given snapshot name.
+# Warning: actually returns the part of the name after the last
+# hyphen.
+#
+# args: snapshot-name
+#
+get_snapshot_suffix() {
+    echo "${1##*-}"
+}
+
+# Returns the repository name for the given snapshot name.
+# Warning: actually returns the original name with the part after the
+# last hyphen removed.
+#
+# args: snapshot-name
+#
+get_snapshot_repo() {
+    echo "${1%-*}"
+}
+
+# Removes the snapshot with the given name.
+#
+# args: snapshot-name
+#
+aptly_snapshot_drop() {
+    if aptly_is_published "$1"; then
+        echo "Snapshot is published: $1" >&2
+        return 1
+    fi
+    aptly snapshot drop "$1" 2>/dev/null 1>&2
+}
+
+# Removes the repo with the given name.
+#
+# args: repo-name
+#
+aptly_repo_drop() {
+    if aptly_is_published "$1"; then
+        echo "Repo is published: $1" >&2
+        return 1
+    fi
+    aptly repo drop "$1" 2>/dev/null 1>&2
+}
+
+# Outputs all of the snapshot names known to aptly.
+#
+# outputs: name-1\n name-2\n...
+#
+aptly_list_snapshots() {
+    aptly snapshot list | sed -n -e 's/^[[:space:]]\+\*[[:space:]]\+\[\([^]]\+\)\].*$/\1/p'
+}
+
+# Outputs all of the repository names known to aptly.
+#
+# outputs: name-1\n name-2\n...
+#
+aptly_list_repos() {
+    aptly repo list | sed -n -e 's/^[[:space:]]\+\*[[:space:]]\+\[\([^]]\+\)\].*$/\1/p'
+}
+
+# Outputs all of the publication names known to aptly.
+# If a set of snapshot or repository names is passed then lists only
+# those names under which the given set is published.
+#
+# args: [repo-or-snapshot-1 repo-or-snapshot-2...]
+# outputs: name-1\n name-2\n...
+#
+GETPUBNAME='s/^[[:space:]]\+\*[[:space:]]\+\([^[:space:]]\+\).*$/\1/p'
+aptly_list_pubs() {
+    if [ $# -eq 0 ]; then
+        aptly publish list | sed -n -e "$GETPUBNAME"
+    else
+        local regex='publishes'
+        for n in "$@"; do
+            regex="$regex.*[[:space:]]*{[^[}]*\\[$n\\][^}]*}"
+        done
+        aptly publish list | sed -n -e "/$regex/! d" -e "$GETPUBNAME"
+    fi
+}
+
+# Checks if the given repository, snapshot or set of such
+# is published.
+#
+# args: repo-or-snapshot-1 [repo-or-snapshot-2...]
+#
+aptly_is_published() {
+    [ $(aptly_list_pubs "$@" | wc -l) -gt 0 ]
+}
+
+# Removes the multiarch snapshot with the given name along with
+# snapshots it is derived from.
+#
+# args: snapshot-name
+#
+aptly_multiarch_drop() {
+
+    if ! aptly_snapshot_exists "$1"; then
+        echo "Snapshot doesn't exist: $1" >&2
+        return 1
+    fi
+
+    if aptly_is_published "$1"; then
+        echo "Snapshot is published: $1" >&2
+        return 1
+    fi
+
+    local base="$(get_repo_base_name "$1")"
+
+    if [ -z "$base" ]; then
+        echo "Malformed snapshot name, no base: $1" >&2
+        return 1
+    fi
+
+    local rest="${1#*-}"
+
+    if [ -z "$rest" ]; then
+        echo "Malformed snapshot name, only base: $1" >&2
+        return 1
+    fi
+
+    aptly_snapshot_drop "$1" && \
+        aptly_list_snapshots | grep "^$base-[^-]\\+-$rest\$" | \
+            while read m; do
+                if aptly_snapshot_exists "$m"; then
+                    aptly_snapshot_drop "$m" || exit $?
+                fi
+            done
 }
