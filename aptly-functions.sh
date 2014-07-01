@@ -342,5 +342,63 @@ aptly_publish_multiarch() {
         --component="$comps" \
         --distribution="$base" \
         "$@" \
-        "$prefix"
+        "$prefix" \
+        2>/dev/null 1>&2
+}
+
+# Outputs the names of the repositories/snapshots that are published
+# under the given name.
+#
+# args: prefix/distribution
+# outputs: name-1\n name-2\n...
+#
+aptly_list_pub_repos() {
+    local pub="$(echo "$1" | sed -e 's,/,\\/,g')"
+
+    aptly publish list | sed -n -e "/^[[:space:]]\\+\\*[[:space:]]\\+$pub[[:space:]]\\+/ { s/^[^{]\\+[[:space:]]publishes[[:space:]]\\+//; s/{[^[]\\+\\[//g; s/\\][^}]\\+}//g; s/,[[:space:]]/\\n/g; p; q }"
+}
+
+# Checks if the given publication name is known to aptly.
+#
+# args: prefix/distribution
+#
+aptly_pub_exists() {
+    local pub="$(echo "$1" | sed -e 's,/,\\/,g')"
+
+    aptly publish list | grep -q "^[[:space:]]\\+\\*[[:space:]]\\+$pub[[:space:]]\\+"
+}
+
+# Removes the repo/snapshot publication with the given name.
+# The name should be of the form prefix/distribution as
+# returned by `aptly_publish_multiarch`.
+#
+# With the -a option passed as the first argument also drops
+# all the snapshots that are published under the given name along
+# with snapshots they are derived from.
+#
+# args: [-a] prefix/distribution
+#
+aptly_pub_drop() {
+    local all=
+    local repos=
+
+    if [ "${1:-}" = "-a" ]; then
+        all=-a; shift
+        repos="$(aptly_list_pub_repos "$1")"
+    fi
+
+    if ! aptly_pub_exists "$1"; then
+        echo "Publication doesn't exist: $1" >&2
+        return 1
+    fi
+
+    aptly publish drop "${1#*/}" "${1%/*}" 2>/dev/null 1>&2 || return $?
+
+    if [ -n "$all" ]; then
+        echo "$repos" | while read sn; do
+            if aptly_snapshot_exists "$sn"; then
+                aptly_multiarch_drop "$sn" || exit $?
+            fi
+        done
+    fi
 }
