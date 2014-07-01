@@ -31,6 +31,7 @@ aptly_repo_exists() {
 # with the hyphen.
 #
 # args: base-arch-component
+# outputs: base
 #
 get_repo_base_name() {
     echo "${1%%-*}"
@@ -42,6 +43,7 @@ get_repo_base_name() {
 # with the hyphen.
 #
 # args: base-arch-component
+# outputs: arch
 #
 get_repo_arch_name() {
     local tmp="${1#*-}"
@@ -54,6 +56,7 @@ get_repo_arch_name() {
 # with the hyphen.
 #
 # args: base-arch-component
+# outputs: component
 #
 get_repo_comp_name() {
     local tmp="${1#*-}"
