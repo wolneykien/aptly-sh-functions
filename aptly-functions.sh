@@ -327,6 +327,11 @@ aptly_publish_multiarch() {
         return 1
     fi
 
+    if aptly_pub_exists "$prefix/$base"; then
+        echo "Publication already exists: $prefix/$base"
+        return 1
+    fi
+
     local comps=
     for sn in "$@"; do
         if ! aptly_snapshot_exists "$sn"; then
