@@ -132,17 +132,20 @@ aptly_snapshot_repo() {
 # one. The name of the resulting united snapshot is the name
 # of the first repository lacking its 'arch' part and the current date
 # appended. Optionally the suffix can be specified explicitly by
-# passing `-s suffix` as the last two arguments.
+# passing `-s suffix` as the first two arguments.
 #
-# args: repo1 repo2 ... [-s suffix]
+# args: [-s suffix] repo1 repo2 ...
 # outputs: snapshot-name
 #
 aptly_snapshot_multiarch() {
     [ $# -gt 0 ] || return 0
 
-    local args="$*"
-    local suf="${args##* -s }"
-    [ "$suf" != "$args" ] || suf="$(date +%Y%m%d)"
+    local suf=
+    if [ "${1:-}" = "-s" ]; then
+        suf="$2"; shift; shift
+    else
+        suf="$(date +%Y%m%d)"
+    fi
 
     for r in "$@"; do
         if ! aptly_repo_exists "$r"; then
