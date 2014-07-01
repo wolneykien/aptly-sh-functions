@@ -299,3 +299,45 @@ aptly_multiarch_drop() {
                 fi
             done
 }
+
+# Publishes the set of multiarch snapshots with the given names.
+# The first snapshot suffix is used as the publication prefix and
+# its base name is used as the distribution name. The componet parts
+# of the given names are used as publication components so each value
+# should be uniue within the list.
+
+# Outputs the publication name in the form: 'prefix/distribution'.
+#
+# args: snapshot-1 [snapshot-2...]
+# outputs: prefix/distribution
+#
+aptly_publish_multiarch() {
+    local prefix="$(get_snapshot_suffix "$1")"
+    local base="$(get_repo_base_name "$1")"
+    
+    if [ -z "$prefix" ]; then
+        echo "Malformed snapshot name, no suffix: $1" >&2
+        return 1
+    fi
+    if [ -z "$base" ]; then
+        echo "Malformed snapshot name, no base: $1" >&2
+        return 1
+    fi
+
+    local comps=
+    for sn in "$@"; do
+        if ! aptly_snapshot_exists "$sn"; then
+            echo "Snapshot doesn't exist: $sn" >&2
+            return 1
+        fi
+        sn="${sn%-*}"
+        comps="$comps,${sn#*-}"
+    done
+    comps="${comps#,}"
+
+    aptly publish snapshot \
+        --component="$comps" \
+        --distribution="$base" \
+        "$@" \
+        "$prefix"
+}
