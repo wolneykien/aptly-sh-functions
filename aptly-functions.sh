@@ -25,7 +25,7 @@ aptly_repo_exists() {
     aptly repo show "$1" 2>/dev/null 1>&2
 }
 
-# Gets the base part from the given repository name.
+# Returns the base part from the given repository name.
 # The name of the repo should be composed of the
 # basename, architecture and component parts joined
 # with the hyphen.
@@ -36,7 +36,7 @@ get_repo_base_name() {
     echo "${1%%-*}"
 }
 
-# Gets the architecture part from the given repository name.
+# Returns the architecture part from the given repository name.
 # The name of the repo should be composed of the
 # basename, architecture and component parts joined
 # with the hyphen.
@@ -48,7 +48,7 @@ get_repo_arch_name() {
     echo "${tmp%%-*}"
 }
 
-# Gets the component part from the given repository name.
+# Returns the component part from the given repository name.
 # The name of the repo should be composed of the
 # basename, architecture and component parts joined
 # with the hyphen.
@@ -109,7 +109,7 @@ aptly_snapshot_exists() {
 # Optionally the suffix can be specified explicitly.
 #
 # args: repository-name [suffix]
-# returns: snapshot-name
+# outputs: snapshot-name
 #
 aptly_snapshot_repo() {
     local sn="$1-${2:-$(date +%Y%m%d)}"
@@ -135,7 +135,7 @@ aptly_snapshot_repo() {
 # passing `-s suffix` as the last two arguments.
 #
 # args: repo1 repo2 ... [-s suffix]
-# returns: snapshot-name
+# outputs: snapshot-name
 #
 aptly_snapshot_multiarch() {
     [ $# -gt 0 ] || return 0
