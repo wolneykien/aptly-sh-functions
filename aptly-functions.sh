@@ -199,7 +199,7 @@ get_snapshot_repo() {
 }
 
 # Removes the snapshot with the given name. Use -f option to
-# drop a published snapshot.
+# drop a snapshot that is referenced by an other snapshot.
 #
 # args: [-f] snapshot-name
 #
