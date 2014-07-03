@@ -119,7 +119,7 @@ aptly_snapshot_repo() {
         return 1
     fi
     if aptly_snapshot_exists "$sn"; then
-        echo "Snapshot already exists: $sn"
+        echo "Snapshot already exists: $sn" >&2
         return 1
     fi
 
@@ -160,7 +160,7 @@ aptly_snapshot_multiarch() {
 
     local sn="$(get_repo_base_name "$1")-$(get_repo_comp_name "$1")-$suf"
     if aptly_snapshot_exists "$sn"; then
-        echo "Snapshot already exists: $sn"
+        echo "Snapshot already exists: $sn" >&2
         return 1
     fi
 
@@ -381,7 +381,7 @@ aptly_publish_multiarch() {
     fi
 
     if aptly_pub_exists "$prefix/$dist"; then
-        echo "Publication already exists: $prefix/$dist"
+        echo "Publication already exists: $prefix/$dist" >&2
         return 1
     fi
 
