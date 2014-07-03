@@ -219,7 +219,7 @@ aptly_snapshot_drop() {
         shift
     fi
 
-    if [ -z "$force" ] && aptly_is_published "$1"; then
+    if aptly_is_published "$1"; then
         echo "Snapshot is published: $1" >&2
         return 1
     fi
@@ -345,7 +345,7 @@ aptly_multiarch_drop() {
     aptly_snapshot_drop "$1" && \
         aptly_list_snapshots | grep "^$base-[^-]\\+-$rest\$" | \
             while read m; do
-                if aptly_snapshot_exists "$m"; then
+                if aptly_snapshot_exists "$m" && ! aptly_is_published "$m"; then
                     aptly_snapshot_drop "$m" || exit $?
                 fi
             done
