@@ -141,8 +141,12 @@ aptly_snapshot_multiarch() {
     [ $# -gt 0 ] || return 0
 
     local suf=
-    if [ "${1:-}" = "-s" ]; then
-        suf="$2"; shift; shift
+
+    if [ -n "${1:-}" -a -z "${1##-*}" ]; then
+        if [ "${1:-}" = "-s" ]; then
+            shift; suf="$1"
+        fi
+        shift
     else
         suf="$(date +%Y%m%d)"
     fi
@@ -194,36 +198,73 @@ get_snapshot_repo() {
     echo "${1%-*}"
 }
 
-# Removes the snapshot with the given name.
+# Removes the snapshot with the given name. Use -f option to
+# drop a published snapshot.
 #
-# args: snapshot-name
+# args: [-f] snapshot-name
 #
 aptly_snapshot_drop() {
-    if aptly_is_published "$1"; then
+    local force=
+    if [ -n "${1:-}" -a -z "${1##-*}" ]; then
+        if [ "$1" = "-f" ]; then
+            force=--force
+        fi
+        shift
+    fi
+
+    if [ -z "$force" ] && aptly_is_published "$1"; then
         echo "Snapshot is published: $1" >&2
         return 1
     fi
-    aptly snapshot drop "$1" 2>/dev/null 1>&2
+    aptly snapshot drop $force "$1" 2>/dev/null 1>&2
 }
 
-# Removes the repo with the given name.
+# Removes the repo with the given name. Use -f option to
+# drop a snapshotted or published repo.
 #
-# args: repo-name
+# args: [-f] repo-name
 #
 aptly_repo_drop() {
-    if aptly_is_published "$1"; then
-        echo "Repo is published: $1" >&2
+    local force=
+    if [ -n "${1:-}" -a -z "${1##-*}" ]; then
+        if [ "$1" = "-f" ]; then
+            force=--force
+        fi
+        shift
+    fi
+
+    if [ -z "$force" ] && aptly_is_published "$1"; then
+        echo "Repository is published: $1" >&2
         return 1
     fi
-    aptly repo drop "$1" 2>/dev/null 1>&2
+
+    if [ -z "$force" ] && aptly_has_snapshots "$1"; then
+        echo "Repository has snapshots: $1" >&2
+        return 1
+    fi
+
+    aptly repo drop $force "$1" 2>/dev/null 1>&2
 }
 
-# Outputs all of the snapshot names known to aptly.
+# Outputs all of the snapshot names known to aptly. If a repository
+# name is passed then list snapshots of that particular repository
+# only.
 #
+# args: [repo-name]
 # outputs: name-1\n name-2\n...
 #
 aptly_list_snapshots() {
-    aptly snapshot list | sed -n -e 's/^[[:space:]]\+\*[[:space:]]\+\[\([^]]\+\)\].*$/\1/p'
+    aptly snapshot list | sed -n \
+        ${1:+-e "/\\[$1\\]/! d"} \
+        -e 's/^[[:space:]]\+\*[[:space:]]\+\[\([^]]\+\)\].*$/\1/p'
+}
+
+# Checks if the specified repository has any snapshots.
+#
+# args: repo-name
+#
+aptly_has_snapshots() {
+    [ $(aptly_list_snapshots "$1" | wc -l) -gt 0 ]
 }
 
 # Outputs all of the repository names known to aptly.
@@ -387,9 +428,12 @@ aptly_pub_drop() {
     local all=
     local repos=
 
-    if [ "${1:-}" = "-a" ]; then
-        all=-a; shift
-        repos="$(aptly_list_pub_repos "$1")"
+    if [ -n "${1:-}" -a -z "${1##-*}" ]; then
+        if [ "${1:-}" = "-a" ]; then
+            all=-a
+            repos="$(aptly_list_pub_repos "$1")"
+        fi
+        shift
     fi
 
     if ! aptly_pub_exists "$1"; then
