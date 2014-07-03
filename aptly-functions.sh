@@ -398,7 +398,7 @@ aptly_publish_multiarch() {
 
     aptly publish snapshot \
         --component="$comps" \
-        --distribution="$base" \
+        --distribution="$dist" \
         "$@" \
         "$prefix" \
         2>/dev/null 1>&2
@@ -441,9 +441,9 @@ aptly_pub_drop() {
     local repos=
 
     if [ -n "${1:-}" -a -z "${1##-*}" ]; then
-        if [ "${1:-}" = "-a" ]; then
+        if [ "$1" = "-a" ]; then
             all=-a
-            repos="$(aptly_list_pub_repos "$1")"
+            repos="$(aptly_list_pub_repos "$2")"
         fi
         shift
     fi
