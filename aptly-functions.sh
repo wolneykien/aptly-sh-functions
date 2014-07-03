@@ -352,24 +352,36 @@ aptly_multiarch_drop() {
 
 # Outputs the publication name in the form: 'prefix/distribution'.
 #
-# args: snapshot-1 [snapshot-2...]
+# args: [-p pfix/dist] snapshot-1 [snapshot-2...]
 # outputs: prefix/distribution
 #
 aptly_publish_multiarch() {
-    local prefix="$(get_snapshot_suffix "$1")"
-    local base="$(get_repo_base_name "$1")"
-    
+    local prefix=
+    local dist=
+
+    if [ -n "${1:-}" -a -z "${1##-*}" ]; then
+        if [ "$1" = "-p" ]; then            
+            shift
+            [ "$1" = "${1%/*}" ] || prefix="${1%/*}"
+            dist="${1##*/}"
+        fi
+        shift
+    fi
+
+    [ -n "$prefix" ] || prefix="$(get_snapshot_suffix "$1")"
     if [ -z "$prefix" ]; then
         echo "Malformed snapshot name, no suffix: $1" >&2
         return 1
     fi
-    if [ -z "$base" ]; then
+
+    [ -n "$dist" ] || dist="$(get_repo_base_name "$1")"    
+    if [ -z "$dist" ]; then
         echo "Malformed snapshot name, no base: $1" >&2
         return 1
     fi
 
-    if aptly_pub_exists "$prefix/$base"; then
-        echo "Publication already exists: $prefix/$base"
+    if aptly_pub_exists "$prefix/$dist"; then
+        echo "Publication already exists: $prefix/$dist"
         return 1
     fi
 
