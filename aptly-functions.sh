@@ -147,6 +147,13 @@ aptly_snapshot_multiarch() {
             shift; suf="$1"
         fi
         shift
+    fi
+
+    if [ -n "$suf" ]; then
+        if [ "${suf%-*}" != "$suf" ]; then
+            echo "Suffix should't contain hyphens: $suf" >&2
+            return 1
+        fi
     else
         suf="$(date +%Y%m%d)"
     fi
@@ -453,7 +460,7 @@ aptly_pub_drop() {
         return 1
     fi
 
-    aptly publish drop "${1#*/}" "${1%/*}" 2>/dev/null 1>&2 || return $?
+    aptly publish drop "${1##*/}" "${1%/*}" 2>/dev/null 1>&2 || return $?
 
     if [ -n "$all" ]; then
         echo "$repos" | while read sn; do
