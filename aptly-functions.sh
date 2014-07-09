@@ -103,6 +103,44 @@ aptly_repo_create() {
         1>&2
 }
 
+# Add packages to the named repository.
+# Optional argument -a receiveing the comma-separated list
+# of architectures sets the arch filter. Optional argument
+# -r controls the deletion of added packages.
+#
+# args: [-a archs] [-r] repo-name pkg-or-dir [...]
+#
+aptly_repo_add() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_repo_add $@"
+        return 0
+    fi
+
+    local archs=; remove=
+    while [ -n "${1:-}" -a -z "${1##-*}" ]; do
+        if [ "${1:-}" = "-a" ]; then
+            shift; archs="$1"
+        elif [ "${1:-}" = "-r" ]; then
+            remove=-r
+        fi
+        shift
+    done
+
+    local repo="$1"; shift
+
+    if ! aptly_repo_exists "$repo"; then
+        echo "Repository doesn't exist: $repo" >&2
+        return 1
+    fi
+
+    aptly repo add \
+        ${archs:+--architectures="$archs"} \
+        ${remove:+--remove-files} \
+        "$repo" \
+        "$@" \
+        2>/dev/null 1>&2
+}
+
 # Checks if the specified repository snapshot is registered with
 # aptly.
 #
@@ -195,7 +233,6 @@ aptly_snapshot_multiarch() {
     [ $# -gt 0 ] || return 0
 
     local suf=
-
     if [ -n "${1:-}" -a -z "${1##-*}" ]; then
         if [ "${1:-}" = "-s" ]; then
             shift; suf="$1"
