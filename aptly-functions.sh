@@ -469,26 +469,29 @@ aptly_multiarch_drop() {
             done
 }
 
-# Publishes the set of multiarch snapshots with the given names.
-# The first snapshot suffix is used as the publication prefix and
-# its base name is used as the distribution name. The componet parts
-# of the given names are used as publication components so each value
-# should be uniue within the list.
+# Publishes the set of single or multi-arch snapshots with the given
+# names. The first snapshot suffix is used as the publication prefix
+# and its base name is used as the distribution name. The componet
+# parts of the given names are used as publication components so each
+# value should be uniue within the list.
 #
 # With the -S option .* suffix is removed from the component names.
-
+#
+# With the -m option the snapshot names are treated as multi-arch
+# snapshots (i.e. base-comp, lacking the 'arch' part).
+#
 # Outputs the publication name in the form: 'prefix/distribution'.
 #
-# args: [-p pfix/dist] [-S] snapshot-1 [snapshot-2...]
+# args: [-p pfix/dist] [-S] [-m] snapshot-1 [snapshot-2...]
 # outputs: prefix/distribution
 #
-aptly_publish_multiarch() {
+aptly_publish_snapshots() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_publish_multiarch $@" >&2
+        echo "aptly_publish_snapshots $@" >&2
         return 0
     fi
 
-    local prefix=; local dist=; local rmsuf=
+    local prefix=; local dist=; local rmsuf=; local multi=
     while [ -n "${1:-}" -a -z "${1##-*}" ]; do
         if [ "$1" = "-p" ]; then
             shift
@@ -496,6 +499,8 @@ aptly_publish_multiarch() {
             dist="${1##*/}"
         elif [ "$1" = "-S" ]; then
             rmsuf=-S
+        elif [ "$1" = "-m" ]; then
+            multi=-m
         fi
         shift
     done
@@ -525,7 +530,9 @@ aptly_publish_multiarch() {
         fi
         sn="${sn%-*}"
         [ -z "$rmsuf" ] || sn="${sn%.*}"
-        comps="$comps,${sn#*-}"
+        sn="${sn#*-}"
+        [ -n "$multi" ] || sn="${sn#*-}"
+        comps="$comps,$sn"
     done
     comps="${comps#,}"
 
@@ -560,8 +567,7 @@ aptly_pub_exists() {
 }
 
 # Removes the repo/snapshot publication with the given name.
-# The name should be of the form prefix/distribution as
-# returned by `aptly_publish_multiarch`.
+# The name should be of the form prefix/distribution.
 #
 # With the -a option passed as the first argument also drops
 # all the snapshots that are published under the given name along
