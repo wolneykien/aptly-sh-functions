@@ -127,6 +127,37 @@ aptly_snapshot_repo() {
         echo "$sn"
 }
 
+# Creates a united snapshot for the given set of snapshots.
+#
+# args: dest-snap snap1 snap2 ...
+#
+aptly_snapshot_merge() {
+    [ $# -gt 0 ] || return 0
+
+    local sn="$1"; shift
+
+    if aptly_snapshot_exists "$sn"; then
+        echo "Snapshot already exists: $sn" >&2
+        return 1
+    fi
+
+    if [ $# -eq 0 ]; then
+        aptly snapshot create empty "$sn" 2>/dev/null 1>&2
+        return $?
+    fi
+
+    sns=
+    for s in "$@"; do
+        if ! aptly_snapshot_exists "$s"; then
+            echo "Snapshot doesn't exist: $s" >&2
+            return 1
+        fi
+        sns="$sns $s"
+    done
+
+    aptly snapshot merge "$sn" $sns 2>/dev/null 1>&2
+}
+
 # Creates a united snapshot for the given set of repositories.
 # Snapthots each of the given repositories and merges them into
 # one. The name of the resulting united snapshot is the name
