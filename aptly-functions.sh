@@ -72,7 +72,7 @@ get_repo_comp_name() {
 #
 aptly_repo_create() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_repo_create $@"
+        echo "aptly_repo_create $@" >&2
         return 0
     fi
 
@@ -112,7 +112,7 @@ aptly_repo_create() {
 #
 aptly_repo_add() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_repo_add $@"
+        echo "aptly_repo_add $@" >&2
         return 0
     fi
 
@@ -158,12 +158,13 @@ aptly_snapshot_exists() {
 # outputs: snapshot-name
 #
 aptly_snapshot_repo() {
+    local sn="$1-${2:-$(date +%Y%m%d)}"
+
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_snapshot_repo $@"
+        echo "aptly_snapshot_repo $@" >&2
+        echo "$sn" # simulation
         return 0
     fi
-
-    local sn="$1-${2:-$(date +%Y%m%d)}"
 
     if ! aptly_repo_exists "$1"; then
         echo "Repository doesn't exist: $1" >&2
@@ -184,7 +185,7 @@ aptly_snapshot_repo() {
 #
 aptly_snapshot_merge() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_snapshot_merge $@"
+        echo "aptly_snapshot_merge $@" >&2
         return 0
     fi
 
@@ -225,11 +226,6 @@ aptly_snapshot_merge() {
 # outputs: snapshot-name
 #
 aptly_snapshot_multiarch() {
-    if [ -n "$DRY_RUN" ]; then
-        echo "aptly_snapshot_multiarch $@"
-        return 0
-    fi
-
     [ $# -gt 0 ] || return 0
 
     local suf=
@@ -249,6 +245,14 @@ aptly_snapshot_multiarch() {
         suf="$(date +%Y%m%d)"
     fi
 
+    local sn="$(get_repo_base_name "$1")-$(get_repo_comp_name "$1")-$suf"
+
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_snapshot_multiarch $@" >&2
+        echo "$sn" # simulation
+        return 0
+    fi
+
     for r in "$@"; do
         if ! aptly_repo_exists "$r"; then
             echo "Repository doesn't exist: $r" >&2
@@ -256,7 +260,6 @@ aptly_snapshot_multiarch() {
         fi
     done
 
-    local sn="$(get_repo_base_name "$1")-$(get_repo_comp_name "$1")-$suf"
     if aptly_snapshot_exists "$sn"; then
         echo "Snapshot already exists: $sn" >&2
         return 1
@@ -303,7 +306,7 @@ get_snapshot_repo() {
 #
 aptly_snapshot_drop() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_snapshot_drop $@"
+        echo "aptly_snapshot_drop $@" >&2
         return 0
     fi
 
@@ -329,7 +332,7 @@ aptly_snapshot_drop() {
 #
 aptly_repo_drop() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_repo_drop $@"
+        echo "aptly_repo_drop $@" >&2
         return 0
     fi
 
@@ -419,7 +422,7 @@ aptly_is_published() {
 #
 aptly_multiarch_drop() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_multiarch_drop $@"
+        echo "aptly_multiarch_drop $@" >&2
         return 0
     fi
 
@@ -469,7 +472,7 @@ aptly_multiarch_drop() {
 #
 aptly_publish_multiarch() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_publish_multiarch $@"
+        echo "aptly_publish_multiarch $@" >&2
         return 0
     fi
 
@@ -555,7 +558,7 @@ aptly_pub_exists() {
 #
 aptly_pub_drop() {
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_pub_drop $@"
+        echo "aptly_pub_drop $@" >&2
         return 0
     fi
 
