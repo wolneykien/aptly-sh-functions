@@ -116,7 +116,7 @@ aptly_repo_add() {
         return 0
     fi
 
-    local archs=; remove=
+    local archs=; local remove=
     while [ -n "${1:-}" -a -z "${1##-*}" ]; do
         if [ "${1:-}" = "-a" ]; then
             shift; archs="$1"
@@ -464,10 +464,12 @@ aptly_multiarch_drop() {
 # its base name is used as the distribution name. The componet parts
 # of the given names are used as publication components so each value
 # should be uniue within the list.
+#
+# With the -S option .* suffix is removed from the component names.
 
 # Outputs the publication name in the form: 'prefix/distribution'.
 #
-# args: [-p pfix/dist] snapshot-1 [snapshot-2...]
+# args: [-p pfix/dist] [-S] snapshot-1 [snapshot-2...]
 # outputs: prefix/distribution
 #
 aptly_publish_multiarch() {
@@ -476,17 +478,17 @@ aptly_publish_multiarch() {
         return 0
     fi
 
-    local prefix=
-    local dist=
-
-    if [ -n "${1:-}" -a -z "${1##-*}" ]; then
-        if [ "$1" = "-p" ]; then            
+    local prefix=; local dist=; local rmsuf=
+    while [ -n "${1:-}" -a -z "${1##-*}" ]; do
+        if [ "$1" = "-p" ]; then
             shift
             [ "$1" = "${1%/*}" ] || prefix="${1%/*}"
             dist="${1##*/}"
+        elif [ "$1" = "-S" ]; then
+            rmsuf=-S
         fi
         shift
-    fi
+    done
 
     [ -n "$prefix" ] || prefix="$(get_snapshot_suffix "$1")"
     if [ -z "$prefix" ]; then
@@ -512,6 +514,7 @@ aptly_publish_multiarch() {
             return 1
         fi
         sn="${sn%-*}"
+        [ -z "$rmsuf" ] || sn="${sn%.*}"
         comps="$comps,${sn#*-}"
     done
     comps="${comps#,}"
