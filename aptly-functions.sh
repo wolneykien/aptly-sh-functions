@@ -222,19 +222,24 @@ aptly_snapshot_merge() {
 # appended. Optionally the suffix can be specified explicitly by
 # passing `-s suffix` as the first two arguments.
 #
-# args: [-s suffix] repo1 repo2 ...
+# Given the -p option exits normally (outputting the snapshot name) if
+# the resulting snapshot does already exist.
+#
+# args: [-s suffix] [-p] repo1 repo2 ...
 # outputs: snapshot-name
 #
 aptly_snapshot_multiarch() {
     [ $# -gt 0 ] || return 0
 
-    local suf=
-    if [ -n "${1:-}" -a -z "${1##-*}" ]; then
+    local suf=; local pass=
+    while [ -n "${1:-}" -a -z "${1##-*}" ]; do
         if [ "${1:-}" = "-s" ]; then
             shift; suf="$1"
+        elif [ "${1:-}" = "-p" ]; then
+            pass=-p
         fi
         shift
-    fi
+    done
 
     if [ -n "$suf" ]; then
         if [ "${suf%-*}" != "$suf" ]; then
@@ -248,7 +253,7 @@ aptly_snapshot_multiarch() {
     local sn="$(get_repo_base_name "$1")-$(get_repo_comp_name "$1")-$suf"
 
     if [ -n "$DRY_RUN" ]; then
-        echo "aptly_snapshot_multiarch $@" >&2
+        echo "aptly_snapshot_multiarch${pass:+ -p}${suf:+ -s '$suf'} $@" >&2
         echo "$sn" # simulation
         return 0
     fi
@@ -261,8 +266,13 @@ aptly_snapshot_multiarch() {
     done
 
     if aptly_snapshot_exists "$sn"; then
-        echo "Snapshot already exists: $sn" >&2
-        return 1
+        if [ -z "$pass" ]; then
+            echo "Snapshot already exists: $sn" >&2
+            return 1
+        else
+            echo "$sn"
+            return 0
+        fi
     fi
 
     local sns=
