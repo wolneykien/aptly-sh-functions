@@ -17,6 +17,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+# Set to non-null in order not to make any changes:
+DRY_RUN="${DRY_RUN:-}"
+
 # Checks if the specified repository is registered with aptly.
 #
 # args: repo-name
@@ -68,6 +71,11 @@ get_repo_comp_name() {
 # args: base-arch-component
 #
 aptly_repo_create() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_repo_create $@"
+        return 0
+    fi
+
     local base="$(get_repo_base_name "$1")"
     local arch="$(get_repo_arch_name "$1")"
     local comp="$(get_repo_comp_name "$1")"
@@ -112,6 +120,11 @@ aptly_snapshot_exists() {
 # outputs: snapshot-name
 #
 aptly_snapshot_repo() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_snapshot_repo $@"
+        return 0
+    fi
+
     local sn="$1-${2:-$(date +%Y%m%d)}"
 
     if ! aptly_repo_exists "$1"; then
@@ -132,6 +145,11 @@ aptly_snapshot_repo() {
 # args: dest-snap snap1 snap2 ...
 #
 aptly_snapshot_merge() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_snapshot_merge $@"
+        return 0
+    fi
+
     [ $# -gt 0 ] || return 0
 
     local sn="$1"; shift
@@ -169,6 +187,11 @@ aptly_snapshot_merge() {
 # outputs: snapshot-name
 #
 aptly_snapshot_multiarch() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_snapshot_multiarch $@"
+        return 0
+    fi
+
     [ $# -gt 0 ] || return 0
 
     local suf=
@@ -242,6 +265,11 @@ get_snapshot_repo() {
 # args: [-f] snapshot-name
 #
 aptly_snapshot_drop() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_snapshot_drop $@"
+        return 0
+    fi
+
     local force=
     if [ -n "${1:-}" -a -z "${1##-*}" ]; then
         if [ "$1" = "-f" ]; then
@@ -263,6 +291,11 @@ aptly_snapshot_drop() {
 # args: [-f] repo-name
 #
 aptly_repo_drop() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_repo_drop $@"
+        return 0
+    fi
+
     local force=
     if [ -n "${1:-}" -a -z "${1##-*}" ]; then
         if [ "$1" = "-f" ]; then
@@ -348,6 +381,10 @@ aptly_is_published() {
 # args: snapshot-name
 #
 aptly_multiarch_drop() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_multiarch_drop $@"
+        return 0
+    fi
 
     if ! aptly_snapshot_exists "$1"; then
         echo "Snapshot doesn't exist: $1" >&2
@@ -394,6 +431,11 @@ aptly_multiarch_drop() {
 # outputs: prefix/distribution
 #
 aptly_publish_multiarch() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_publish_multiarch $@"
+        return 0
+    fi
+
     local prefix=
     local dist=
 
@@ -475,6 +517,11 @@ aptly_pub_exists() {
 # args: [-a] prefix/distribution
 #
 aptly_pub_drop() {
+    if [ -n "$DRY_RUN" ]; then
+        echo "aptly_pub_drop $@"
+        return 0
+    fi
+
     local all=
     local repos=
 
